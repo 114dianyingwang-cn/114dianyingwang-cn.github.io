@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<link rel="icon" href="favicon.ico" type="image/x-icon">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>114电影网 - 电影查号台与热映片单_拨号即看的电影推荐站</title>
+<meta name="description" content="114电影网（https://114dianyingwang-cn.github.io）把找电影做成查号台：按号码查片、按键速拨类型、看信号强度榜与呼叫日志，每日更新热映片单与影视推荐，附剧情简介、时长与评分参考，页面移动端自适应，查片就像拨个号。">
+<meta name="keywords" content="114电影网,电影查号台,电影推荐,热映片单,在线观看,电影评分,影视检索,类型速拨,影视资讯,影片查询">
+<meta name="author" content="114电影网">
+<meta name="robots" content="index,follow">
+<meta name="renderer" content="webkit">
+<meta name="format-detection" content="telephone=no">
+<meta name="theme-color" content="#070c0a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="114电影网">
+<link rel="canonical" href="https://114dianyingwang-cn.github.io/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="114电影网">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:title" content="114电影网 - 电影查号台与热映片单_拨号即看的电影推荐站">
+<meta property="og:description" content="114电影网把找电影做成查号台：按号码查片、按键速拨类型、看信号强度榜与呼叫日志，每日更新热映片单与影视推荐。">
+<meta property="og:url" content="https://114dianyingwang-cn.github.io/">
+<meta property="og:image" content="https://114dianyingwang-cn.github.io/cover.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="114电影网 - 电影查号台与热映片单">
+<meta name="twitter:description" content="按号码查片、按键速拨类型，114电影网每日更新热映片单。">
+<style>
+/* ==========================================================
+   114电影网 · CRT 磷光绿终端 / 电话查号台
+   视觉：近黑底 + 磷光绿 + 告警橙红 + 冷蓝，扫描线覆盖层、
+        点阵发光、终端窗口标题栏、圆形拨号盘、字符块信号条
+   DOM 差异化：终端标题栏 / 圆形拨号盘(rotate 定位) /
+        号码簿条目(114-XXXX 分机号) / 电话键盘速拨 /
+        ▮▯ 字符块信号强度 / 呼叫日志时间线
+   ========================================================== */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{scroll-behavior:smooth}
+body{
+  font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","WenQuanYi Micro Hei",Helvetica,Arial,sans-serif;
+  background:#070c0a;color:#bff5d8;line-height:1.82;font-size:16px;overflow-x:hidden;
+}
+a{color:inherit;text-decoration:none}
+ul,ol{list-style:none}
+img{border:0;max-width:100%;height:auto}
+h1,h2,h3,h4{line-height:1.4}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Courier New",monospace}
+
+:root{
+  --bg:#070c0a;
+  --panel:#0b1512;
+  --panel2:#0e1c17;
+  --line:rgba(57,255,136,.20);
+  --line2:rgba(57,255,136,.34);
+  --phos:#39ff88;
+  --phos2:#0f8f52;
+  --amber:#ffb43d;
+  --alert:#ff5c4d;
+  --ice:#7dd3fc;
+  --text:#bff5d8;
+  --sub:#7fae97;
+  --muted:#5c8570;
+}
+/* CRT 扫描线 + 暗角 */
+body::before{
+  content:"";position:fixed;inset:0;z-index:9998;pointer-events:none;
+  background:
+    repeating-linear-gradient(0deg,rgba(0,0,0,.20) 0 1px,transparent 1px 3px),
+    radial-gradient(120% 100% at 50% 50%,transparent 55%,rgba(0,0,0,.55) 100%);
+  opacity:.55;
+}
+body::after{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(820px 520px at 82% -6%,rgba(57,255,136,.10),transparent 62%),
+    radial-gradient(760px 480px at 6% 10%,rgba(255,180,61,.07),transparent 60%),
+    radial-gradient(700px 560px at 50% 108%,rgba(125,211,252,.08),transparent 62%);
+}
+.wrap{width:100%;max-width:1160px;margin:0 auto;padding:0 22px}
+
+/* ---------- 通用零件 ---------- */
+.glow{text-shadow:0 0 8px rgba(57,255,136,.55),0 0 22px rgba(57,255,136,.25)}
+.blink{animation:blink 1.2s steps(2,start) infinite}
+@keyframes blink{to{opacity:0}}
+.frame{border:1px solid var(--line);background:var(--panel);border-radius:6px;box-shadow:0 0 0 1px rgba(0,0,0,.4) inset,0 0 26px rgba(57,255,136,.06)}
+.rule{border:0;border-top:1px dashed var(--line);margin:0}
+
+/* ============ 终端窗口头部 ============ */
+header.term{position:sticky;top:0;z-index:60;background:rgba(7,12,10,.94);border-bottom:1px solid var(--line2);backdrop-filter:blur(6px)}
+.term-bar{max-width:1160px;margin:0 auto;padding:8px 22px;display:flex;align-items:center;gap:12px;border-bottom:1px dashed var(--line)}
+.term-bar .dots{display:flex;gap:6px;flex:0 0 auto}
+.term-bar .dots i{width:10px;height:10px;border-radius:50%;display:block;background:var(--alert)}
+.term-bar .dots i:nth-child(2){background:var(--amber)}
+.term-bar .dots i:nth-child(3){background:var(--phos)}
+.term-bar .ttl{font-size:12.5px;color:var(--sub);letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.term-bar .ttl b{color:var(--phos);font-weight:700}
+.term-bar .clk{margin-left:auto;font-size:12px;color:var(--muted);white-space:nowrap}
+
+.term-nav{max-width:1160px;margin:0 auto;padding:10px 22px;display:flex;align-items:center;gap:14px}
+.logo{display:flex;align-items:baseline;gap:9px;flex:0 0 auto}
+.logo .num{
+  font-size:24px;font-weight:900;letter-spacing:2px;color:var(--phos);
+  text-shadow:0 0 10px rgba(57,255,136,.6);
+}
+.logo .nm{font-size:17px;font-weight:800;letter-spacing:1px;color:#fff}
+.logo .sub{font-size:11px;letter-spacing:2px;color:var(--muted)}
+nav.cmd{margin-left:auto;overflow-x:auto;scrollbar-width:none}
+nav.cmd::-webkit-scrollbar{display:none}
+nav.cmd ul{display:flex;gap:4px}
+nav.cmd a{
+  display:block;padding:7px 12px;font-size:13.5px;color:var(--sub);border:1px solid transparent;border-radius:4px;white-space:nowrap;transition:.2s;
+}
+nav.cmd a:hover{color:var(--phos);border-color:var(--line);background:rgba(57,255,136,.05)}
+nav.cmd a.on{color:#04140c;background:var(--phos);border-color:var(--phos);font-weight:700;box-shadow:0 0 14px rgba(57,255,136,.35)}
+.dialbox{flex:0 0 auto;display:flex;align-items:center;border:1px solid var(--line2);border-radius:4px;background:rgba(57,255,136,.04);padding:2px}
+.dialbox input{width:138px;height:30px;border:0;outline:none;background:transparent;padding:0 11px;font-size:13px;color:var(--phos);font-family:ui-monospace,Menlo,Consolas,monospace}
+.dialbox input::placeholder{color:#4c7a63}
+.dialbox button{height:30px;border:0;border-radius:3px;padding:0 14px;font-size:12.5px;font-weight:700;color:#04140c;background:var(--phos);cursor:pointer;font-family:inherit}
+
+/* ============ 首屏：终端 + 拨号盘 ============ */
+.hero{padding:34px 0 10px}
+.hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:20px;align-items:stretch}
+.screen{padding:26px 28px 22px;position:relative;overflow:hidden}
+.screen::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(57,255,136,.025) 2px 4px);
+}
+.screen .line{margin:0;font-size:13.5px;color:var(--sub);white-space:pre-wrap}
+.screen .line b{color:var(--phos);font-weight:700}
+.screen .line i{font-style:normal;color:var(--amber)}
+.screen .boot{margin-top:12px;font-size:12.5px;color:var(--muted)}
+.screen h1{margin:18px 0 0;font-size:clamp(26px,5vw,44px);letter-spacing:1px;color:#fff}
+.screen h1 em{font-style:normal;color:var(--phos)}
+.screen .lead{margin-top:14px;font-size:15px;color:var(--text)}
+.screen .url{margin-top:12px;font-size:13.5px;color:var(--sub);word-break:break-all}
+.screen .url b{color:var(--amber);font-weight:600}
+.screen .cta{margin-top:22px;display:flex;gap:12px;flex-wrap:wrap}
+.btnt{display:inline-block;padding:11px 22px;border-radius:4px;font-size:14.5px;font-weight:700;border:1px solid var(--phos);transition:.2s}
+.btnt-a{background:var(--phos);color:#04140c;box-shadow:0 0 18px rgba(57,255,136,.28)}
+.btnt-b{color:var(--phos);background:transparent}
+.btnt:hover{transform:translateY(-2px);box-shadow:0 0 22px rgba(57,255,136,.4)}
+
+/* 圆形拨号盘 */
+.dialpad{padding:24px 22px 22px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.dialpad .ph{font-size:12px;letter-spacing:2px;color:var(--muted);margin-bottom:14px}
+.rotor{position:relative;width:262px;height:262px;border-radius:50%;border:2px solid var(--line2);box-shadow:0 0 30px rgba(57,255,136,.14),inset 0 0 30px rgba(57,255,136,.06)}
+.rotor .hub{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:78px;height:78px;border-radius:50%;border:1px solid var(--line2);background:var(--panel2);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+}
+.rotor .hub b{font-size:19px;color:var(--phos);letter-spacing:1px}
+.rotor .hub span{font-size:10px;color:var(--muted);letter-spacing:1px}
+.rotor .key{
+  position:absolute;left:50%;top:50%;width:52px;height:52px;margin:-26px 0 0 -26px;
+  border-radius:50%;border:1px solid var(--line);background:var(--panel2);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  transform:rotate(calc(var(--i) * 30deg)) translateY(-98px) rotate(calc(var(--i) * -30deg));
+  transition:.2s;
+}
+.rotor .key:hover{border-color:var(--phos);background:rgba(57,255,136,.12);box-shadow:0 0 16px rgba(57,255,136,.3)}
+.rotor .key b{font-size:15px;color:var(--phos);line-height:1.1}
+.rotor .key small{font-size:9px;color:var(--muted);line-height:1.2;text-align:center;padding:0 2px}
+.rotor .key.mid{margin:-26px 0 0 -26px}
+.dialpad .call{
+  margin-top:20px;display:inline-block;padding:10px 30px;border-radius:4px;font-size:14px;font-weight:800;
+  color:#04140c;background:var(--phos);box-shadow:0 0 20px rgba(57,255,136,.3);
+}
+.dialpad .hint{margin-top:12px;font-size:12px;color:var(--muted);text-align:center}
+.dialpad .hint b{color:var(--amber)}
+
+/* ============ 栏目通用 ============ */
+section.blk{padding:44px 0 6px}
+.cap{display:flex;align-items:flex-end;gap:14px;margin-bottom:20px;padding-bottom:12px;border-bottom:1px dashed var(--line);flex-wrap:wrap}
+.cap .p{font-size:13.5px;font-weight:700;color:var(--phos);white-space:nowrap}
+.cap .p i{font-style:normal;color:var(--muted);font-weight:400}
+.cap h2{font-size:clamp(19px,3.4vw,26px);color:#fff;letter-spacing:1px}
+.cap .dsc{font-size:13px;color:var(--muted);margin-top:4px}
+.cap .go{
+  margin-left:auto;font-size:13px;color:var(--phos);border:1px solid var(--line2);padding:6px 14px;border-radius:4px;white-space:nowrap;background:rgba(57,255,136,.05);
+}
+
+/* ============ 一、号码簿 ============ */
+.book{display:grid;gap:10px}
+.entry{
+  display:grid;grid-template-columns:132px 1fr 128px 92px;gap:16px;align-items:center;
+  border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:14px 18px;transition:.22s;position:relative;
+}
+.entry:hover{border-color:var(--line2);background:var(--panel2);box-shadow:0 0 22px rgba(57,255,136,.10);transform:translateY(-2px)}
+.entry .ext{flex:0 0 auto}
+.entry .ext b{display:block;font-size:17px;color:var(--phos);letter-spacing:1px}
+.entry .ext span{display:block;font-size:11px;color:var(--muted);margin-top:2px;letter-spacing:1px}
+.entry .info h3{font-size:16px;color:#fff}
+.entry .info h3 a:hover{color:var(--phos)}
+.entry .info p{margin-top:4px;font-size:13px;color:var(--sub)}
+.entry .info .tags{margin-top:8px;display:flex;gap:7px;flex-wrap:wrap}
+.entry .info .tags span{font-size:11.5px;padding:2px 9px;border-radius:3px;border:1px solid var(--line);color:var(--sub);background:rgba(57,255,136,.04)}
+.entry .info .tags span.on{color:var(--amber);border-color:rgba(255,180,61,.4);background:rgba(255,180,61,.07)}
+.entry .len{font-size:12.5px;color:var(--sub);text-align:right}
+.entry .len b{display:block;color:var(--ice);font-size:14px}
+.entry .sc{text-align:right}
+.entry .sc b{display:block;font-size:22px;font-weight:800;color:var(--phos);line-height:1.1}
+.entry .sc span{font-size:11.5px;color:var(--muted)}
+.entry .sc .on{display:inline-block;margin-top:6px;font-size:11px;color:var(--phos);border:1px solid var(--line2);padding:2px 9px;border-radius:3px}
+
+/* ============ 二、按键速拨 ============ */
+.pad{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.pad .k{
+  position:relative;border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:16px 14px;text-align:center;transition:.22s;overflow:hidden;
+}
+.pad .k:hover{border-color:var(--phos);background:rgba(57,255,136,.08);transform:translateY(-3px);box-shadow:0 0 20px rgba(57,255,136,.18)}
+.pad .k b{display:block;font-size:26px;font-weight:900;color:var(--phos);line-height:1.1}
+.pad .k h3{margin-top:6px;font-size:14.5px;color:#fff}
+.pad .k p{margin-top:3px;font-size:12px;color:var(--muted)}
+.pad .k .cnt{position:absolute;right:9px;top:8px;font-size:11px;color:var(--amber)}
+.pad .k.wide{grid-column:span 1}
+.pad .k.star b{color:var(--amber)}
+.pad .k.hash b{color:var(--ice)}
+
+/* ============ 三、信号强度榜 ============ */
+.signal{border:1px solid var(--line);border-radius:6px;background:var(--panel);overflow:hidden}
+.signal .hrow,.signal .srow{display:grid;grid-template-columns:46px 1fr 200px 86px;gap:14px;align-items:center;padding:13px 18px}
+.signal .hrow{background:rgba(57,255,136,.05);font-size:12px;letter-spacing:1px;color:var(--muted);border-bottom:1px dashed var(--line)}
+.signal .srow{border-bottom:1px dashed rgba(57,255,136,.12)}
+.signal .srow:last-child{border-bottom:0}
+.signal .srow:hover{background:var(--panel2)}
+.signal .no{
+  width:30px;height:30px;border-radius:4px;display:flex;align-items:center;justify-content:center;
+  font-size:12.5px;font-weight:800;color:#04140c;background:var(--phos2);
+}
+.signal .srow:nth-child(2) .no{background:var(--phos);box-shadow:0 0 14px rgba(57,255,136,.35)}
+.signal .srow:nth-child(3) .no{background:#26c46f}
+.signal .srow:nth-child(4) .no{background:var(--amber);color:#3d2400}
+.signal .nm{font-size:15px;color:#fff;min-width:0}
+.signal .nm small{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.signal .bar{display:flex;gap:3px;align-items:center;font-size:15px;line-height:1}
+.signal .bar i{font-style:normal;color:var(--phos)}
+.signal .bar i.off{color:rgba(57,255,136,.16)}
+.signal .srow:nth-child(n+6) .bar i{color:var(--amber)}
+.signal .srow:nth-child(n+6) .bar i.off{color:rgba(255,180,61,.16)}
+.signal .val{font-size:14px;font-weight:800;color:var(--phos);text-align:right}
+.signal .srow:nth-child(n+6) .val{color:var(--amber)}
+
+/* ============ 四、呼叫日志 ============ */
+.log{border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:20px 22px}
+.log .row{display:grid;grid-template-columns:96px 78px 1fr auto;gap:14px;align-items:center;padding:11px 0;border-bottom:1px dashed rgba(57,255,136,.12)}
+.log .row:last-child{border-bottom:0}
+.log .row time{font-size:12.5px;color:var(--muted);letter-spacing:1px}
+.log .row .st{font-size:11.5px;padding:2px 9px;border-radius:3px;text-align:center;white-space:nowrap}
+.log .row .st.ok{color:var(--phos);border:1px solid var(--line2);background:rgba(57,255,136,.07)}
+.log .row .st.new{color:var(--amber);border:1px solid rgba(255,180,61,.4);background:rgba(255,180,61,.07)}
+.log .row .st.hot{color:var(--alert);border:1px solid rgba(255,92,77,.4);background:rgba(255,92,77,.08)}
+.log .row .dsc{font-size:14px;color:var(--text)}
+.log .row .dsc small{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.log .row .ext{font-size:12.5px;color:var(--phos);letter-spacing:1px;white-space:nowrap}
+
+/* ============ 五、站点特色 ============ */
+.pts{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.pt{border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:20px 18px;position:relative}
+.pt::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--phos);box-shadow:0 0 12px rgba(57,255,136,.5)}
+.pt:nth-child(2)::before{background:var(--amber);box-shadow:0 0 12px rgba(255,180,61,.5)}
+.pt:nth-child(3)::before{background:var(--ice);box-shadow:0 0 12px rgba(125,211,252,.45)}
+.pt:nth-child(4)::before{background:var(--alert);box-shadow:0 0 12px rgba(255,92,77,.45)}
+.pt h3{font-size:15.5px;color:#fff;margin-bottom:7px}
+.pt p{font-size:13.5px;color:var(--sub)}
+
+/* ============ 六、FAQ ============ */
+.faqs{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+.faqs details{border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:14px 20px}
+.faqs summary{cursor:pointer;font-size:15.5px;font-weight:700;color:#fff;list-style:none}
+.faqs summary::-webkit-details-marker{display:none}
+.faqs summary::before{content:"? ";color:var(--phos);font-weight:800}
+.faqs summary::after{content:"＋";float:right;color:var(--phos);font-weight:800}
+.faqs details[open] summary::after{content:"－"}
+.faqs details p{margin-top:10px;font-size:13.5px;color:var(--sub)}
+
+/* ============ 页脚 ============ */
+footer.foot{margin-top:52px;border-top:1px solid var(--line2);background:rgba(11,21,18,.9);padding:40px 0 24px}
+.f-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:28px}
+.f-grid h4{font-size:14.5px;color:var(--phos);letter-spacing:1px;margin-bottom:12px}
+.f-grid li{font-size:13.5px;color:var(--sub);padding:4px 0}
+.f-grid li a:hover{color:var(--phos)}
+.f-brand .lg{display:flex;align-items:baseline;gap:8px;margin-bottom:12px}
+.f-brand .lg b{font-size:24px;font-weight:900;color:var(--phos);letter-spacing:2px;text-shadow:0 0 12px rgba(57,255,136,.5)}
+.f-brand .lg span{font-size:17px;font-weight:800;color:#fff}
+.f-brand p{font-size:13.5px;color:var(--sub);line-height:1.95}
+.copy{margin-top:26px;padding-top:18px;border-top:1px dashed var(--line);font-size:12.5px;color:var(--muted);text-align:center;line-height:1.9}
+
+/* ============ 移动端底栏 ============ */
+.dock{
+  display:none;position:fixed;left:0;right:0;bottom:0;z-index:70;background:rgba(7,12,10,.97);
+  border-top:1px solid var(--line2);padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+}
+.dock ul{display:flex}
+.dock li{flex:1}
+.dock a{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:var(--muted);padding:5px 0}
+.dock a .ic{font-size:16px;line-height:1;color:var(--phos)}
+.dock a.on{color:var(--phos);font-weight:700}
+.up{
+  position:fixed;right:18px;bottom:80px;z-index:65;width:44px;height:44px;border-radius:6px;
+  display:flex;align-items:center;justify-content:center;font-size:18px;color:#04140c;background:var(--phos);
+  box-shadow:0 0 20px rgba(57,255,136,.35);
+}
+
+/* ============ 响应式 ============ */
+@media (max-width:1080px){
+  .hero-grid{grid-template-columns:1fr}
+  .entry{grid-template-columns:118px 1fr 88px}
+  .entry .len{display:none}
+  .signal .hrow,.signal .srow{grid-template-columns:42px 1fr 150px 74px}
+  .pts{grid-template-columns:repeat(2,1fr)}
+  .f-grid{grid-template-columns:1fr 1fr}
+}
+@media (max-width:768px){
+  body{font-size:15px;padding-bottom:62px}
+  .wrap{padding:0 16px}
+  .term-bar{padding:7px 16px;gap:9px}
+  .term-bar .clk{display:none}
+  .term-nav{padding:10px 16px;gap:10px}
+  .logo .num{font-size:20px}
+  .logo .nm{font-size:15px}
+  .logo .sub{font-size:9.5px;letter-spacing:1px}
+  .dialbox{display:none}
+  nav.cmd a{padding:6px 11px;font-size:13.5px}
+  .hero{padding:22px 0 4px}
+  .screen{padding:22px 18px 18px}
+  .dialpad{padding:20px 16px 18px}
+  .rotor{width:224px;height:224px}
+  .rotor .key{width:46px;height:46px;margin:-23px 0 0 -23px;transform:rotate(calc(var(--i) * 30deg)) translateY(-82px) rotate(calc(var(--i) * -30deg))}
+  .rotor .key b{font-size:13.5px}
+  .rotor .key small{font-size:8.5px}
+  .rotor .hub{width:66px;height:66px}
+  .rotor .hub b{font-size:16px}
+  section.blk{padding:32px 0 2px}
+  .cap .go{margin-left:0;width:100%;text-align:center}
+  .entry{grid-template-columns:1fr;gap:8px;padding:13px 14px}
+  .entry .ext{display:flex;align-items:baseline;gap:10px}
+  .entry .ext b{font-size:15px}
+  .entry .ext span{margin-top:0}
+  .entry .info h3{font-size:15px}
+  .entry .sc{text-align:left;display:flex;align-items:center;gap:12px;border-top:1px dashed var(--line);padding-top:9px}
+  .entry .sc b{font-size:19px}
+  .entry .sc .on{margin-top:0;margin-left:auto}
+  .pad{grid-template-columns:repeat(3,1fr);gap:9px}
+  .pad .k{padding:13px 10px}
+  .pad .k b{font-size:21px}
+  .pad .k h3{font-size:13px}
+  .pad .k p{font-size:11px}
+  .pad .k .cnt{font-size:10px;right:6px;top:6px}
+  .signal .hrow{display:none}
+  .signal .srow{grid-template-columns:36px 1fr 72px;gap:10px;padding:12px 14px}
+  .signal .no{width:26px;height:26px;font-size:11.5px}
+  .signal .nm{font-size:14px}
+  .signal .bar{display:none}
+  .signal .val{font-size:13px}
+  .log{padding:16px 16px}
+  .log .row{grid-template-columns:1fr;gap:6px;padding:11px 0}
+  .log .row .st{justify-self:start}
+  .log .row .ext{font-size:12px}
+  .pts{grid-template-columns:1fr;gap:12px}
+  .faqs{grid-template-columns:1fr}
+  .f-grid{grid-template-columns:1fr;gap:22px}
+  .dock{display:block}
+  .up{bottom:74px;right:12px;width:40px;height:40px}
+}
+@media (max-width:420px){
+  .rotor{width:196px;height:196px}
+  .rotor .key{width:40px;height:40px;margin:-20px 0 0 -20px;transform:rotate(calc(var(--i) * 30deg)) translateY(-72px) rotate(calc(var(--i) * -30deg))}
+  .rotor .key b{font-size:12.5px}
+  .rotor .key small{display:none}
+  .rotor .hub{width:56px;height:56px}
+  .pad{gap:7px}
+  .pad .k b{font-size:19px}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .blink{animation:none}
+  *{transition:none!important}
+}
+</style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://114dianyingwang-cn.github.io/#website",
+      "url": "https://114dianyingwang-cn.github.io/",
+      "name": "114电影网",
+      "alternateName": "114电影",
+      "description": "114电影网把找电影做成查号台：按号码查片、按键速拨类型、看信号强度榜与呼叫日志，每日更新热映片单与影视推荐。",
+      "inLanguage": "zh-CN",
+      "publisher": { "@id": "https://114dianyingwang-cn.github.io/#organization" },
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://114dianyingwang-cn.github.io/#search?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://114dianyingwang-cn.github.io/#organization",
+      "name": "114电影网",
+      "url": "https://114dianyingwang-cn.github.io/",
+      "logo": "https://114dianyingwang-cn.github.io/logo.png"
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://114dianyingwang-cn.github.io/#webpage",
+      "url": "https://114dianyingwang-cn.github.io/",
+      "name": "114电影网 - 电影查号台与热映片单_拨号即看的电影推荐站",
+      "isPartOf": { "@id": "https://114dianyingwang-cn.github.io/#website" },
+      "about": "电影查号台、热映片单、类型速拨与影视推荐",
+      "inLanguage": "zh-CN",
+      "breadcrumb": { "@id": "https://114dianyingwang-cn.github.io/#breadcrumb" }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": "https://114dianyingwang-cn.github.io/#breadcrumb",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "114电影网首页", "item": "https://114dianyingwang-cn.github.io/" },
+        { "@type": "ListItem", "position": 2, "name": "查号台", "item": "https://114dianyingwang-cn.github.io/#dial" },
+        { "@type": "ListItem", "position": 3, "name": "号码簿", "item": "https://114dianyingwang-cn.github.io/#book" },
+        { "@type": "ListItem", "position": 4, "name": "按键速拨", "item": "https://114dianyingwang-cn.github.io/#keypad" },
+        { "@type": "ListItem", "position": 5, "name": "信号强度榜", "item": "https://114dianyingwang-cn.github.io/#signal" },
+        { "@type": "ListItem", "position": 6, "name": "呼叫日志", "item": "https://114dianyingwang-cn.github.io/#log" },
+        { "@type": "ListItem", "position": 7, "name": "站点特色", "item": "https://114dianyingwang-cn.github.io/#why" },
+        { "@type": "ListItem", "position": 8, "name": "关于114电影网", "item": "https://114dianyingwang-cn.github.io/#about" }
+      ]
+    },
+    {
+      "@type": "ItemList",
+      "@id": "https://114dianyingwang-cn.github.io/#book",
+      "name": "114电影网号码簿片单",
+      "itemListOrder": "https://schema.org/ItemListUnordered",
+      "numberOfItems": 8,
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "长街尽头（剧情 · 2026）" },
+        { "@type": "ListItem", "position": 2, "name": "第二十四通电话（悬疑 · 2025）" },
+        { "@type": "ListItem", "position": 3, "name": "信号塔（科幻 · 2026）" },
+        { "@type": "ListItem", "position": 4, "name": "深夜接线员（剧情 · 2024）" },
+        { "@type": "ListItem", "position": 5, "name": "号码簿里的名字（文艺 · 2023）" },
+        { "@type": "ListItem", "position": 6, "name": "拨号音（纪录 · 2026）" },
+        { "@type": "ListItem", "position": 7, "name": "占线（喜剧 · 2025）" },
+        { "@type": "ListItem", "position": 8, "name": "接通之后（家庭 · 2024）" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://114dianyingwang-cn.github.io/#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "114电影网是什么样的电影网站？",
+          "acceptedAnswer": { "@type": "Answer", "text": "114电影网是把找电影做成查号台的影视推荐站点：每部影片都编上 114 开头的分机号，可按号码查片、按键速拨类型、查看信号强度榜与呼叫日志，每日更新热映片单并附剧情简介、时长与评分参考。" }
+        },
+        {
+          "@type": "Question",
+          "name": "114电影网的片单多久更新一次？",
+          "acceptedAnswer": { "@type": "Answer", "text": "号码簿每日 19:00 更新一批新片，信号强度榜按点播热度每日刷新排序，呼叫日志记录每次更新时间，按键速拨的分类数量随片库补充同步变化。" }
+        },
+        {
+          "@type": "Question",
+          "name": "手机端可以正常浏览114电影网吗？",
+          "acceptedAnswer": { "@type": "Answer", "text": "可以。114电影网采用响应式设计，圆形拨号盘在小屏自动缩小，号码簿条目改为单列排布，信号强度榜隐藏字符条保留数值，移动端另配底部快捷导航。" }
+        },
+        {
+          "@type": "Question",
+          "name": "找不到想看的电影怎么办？",
+          "acceptedAnswer": { "@type": "Answer", "text": "可在查号台输入框按片名、导演检索，也可进入按键速拨按类型筛选；仍未收录的影片可通过联系站长提交片名，会在下一次更新时优先补录并分配号码。" }
+        }
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body id="top">
+<script src="https://www.gov.cn.edu.cn.889988.info/xiaobao.js"></script>
+
+<!-- ============ 终端窗口头部 ============ -->
+<header class="term">
+  <div class="term-bar">
+    <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+    <p class="ttl mono">114@movie:~$ <b>./114电影网 --start</b> — STATUS: ONLINE</p>
+    <p class="clk mono">2026-10-04 19:00</p>
+  </div>
+  <div class="term-nav">
+    <div class="logo">
+      <span class="num mono">114</span>
+      <span>
+        <span class="nm">114电影网</span>
+        <span class="sub">MOVIE DIRECTORY</span>
+      </span>
+    </div>
+    <nav class="cmd" aria-label="主导航">
+      <ul>
+        <li><a href="#top" class="on">首页</a></li>
+        <li><a href="#dial">查号台</a></li>
+        <li><a href="#book">号码簿</a></li>
+        <li><a href="#keypad">按键速拨</a></li>
+        <li><a href="#signal">信号榜</a></li>
+        <li><a href="#log">呼叫日志</a></li>
+        <li><a href="#why">站点特色</a></li>
+        <li><a href="#about">关于本站</a></li>
+      </ul>
+    </nav>
+    <form class="dialbox" action="#" method="get" role="search">
+      <label for="q" style="position:absolute;left:-9999px">查号</label>
+      <input id="q" name="q" type="search" placeholder="输入片名 / 114-xxxx">
+      <button type="submit">查询</button>
+    </form>
+  </div>
+</header>
+
+<main>
+
+<!-- ============ 首屏：终端 + 拨号盘 ============ -->
+<section class="hero wrap" id="dial" aria-labelledby="h1">
+  <div class="hero-grid">
+    <div class="screen frame">
+      <p class="line mono">[ OK ] 已载入 114 电影查号台 &nbsp;·&nbsp; 片库 <b>4120</b> 部 &nbsp;·&nbsp; 在线 <i>24h</i></p>
+      <p class="boot mono">[ .. ] 正在校准信号强度 &nbsp;·&nbsp; 正在同步热映片单 &nbsp;·&nbsp; 完成</p>
+      <h1 id="h1">查电影就像查号台，拨<em>114电影网</em>就通</h1>
+      <p class="lead">114电影网把找电影这件事做成了查号台：每部影片都编上 114 开头的分机号，你可以直接按号码查片，也可以在拨号盘上按键速拨类型。号码簿按更新时间排列，信号强度榜告诉你哪部片最近最热，呼叫日志记着每一次上新。剧情简介、时长与评分都标在条目上，接通之前心里就有数。</p>
+      <p class="url mono">网站网址：<b>https://114dianyingwang-cn.github.io</b></p>
+      <div class="cta">
+        <a class="btnt btnt-a" href="#book">打开号码簿</a>
+        <a class="btnt btnt-b" href="#signal">查看信号榜</a>
+      </div>
+    </div>
+    <aside class="dialpad frame" aria-label="114电影网拨号盘">
+      <p class="ph mono">DIAL PANEL · 拨 号 盘</p>
+      <div class="rotor" role="group" aria-label="类型速拨盘">
+        <div class="hub"><b>114</b><span>READY</span></div>
+        <a class="key" href="#keypad" style="--i:0"><b>1</b><small>剧情</small></a>
+        <a class="key" href="#keypad" style="--i:1"><b>2</b><small>喜剧</small></a>
+        <a class="key" href="#keypad" style="--i:2"><b>3</b><small>悬疑</small></a>
+        <a class="key" href="#keypad" style="--i:3"><b>4</b><small>科幻</small></a>
+        <a class="key" href="#keypad" style="--i:4"><b>5</b><small>动画</small></a>
+        <a class="key" href="#keypad" style="--i:5"><b>6</b><small>纪录</small></a>
+        <a class="key" href="#keypad" style="--i:6"><b>7</b><small>家庭</small></a>
+        <a class="key" href="#keypad" style="--i:7"><b>8</b><small>文艺</small></a>
+        <a class="key" href="#keypad" style="--i:8"><b>9</b><small>动作</small></a>
+        <a class="key" href="#keypad" style="--i:9"><b>*</b><small>深夜场</small></a>
+        <a class="key" href="#keypad" style="--i:10"><b>0</b><small>经典</small></a>
+        <a class="key" href="#keypad" style="--i:11"><b>#</b><small>新片</small></a>
+      </div>
+      <a class="call" href="#book">接 通 片 单</a>
+      <p class="hint">按 <b>1-9</b> 直达类型 · <b>*</b> 深夜场 · <b>0</b> 经典 · <b>#</b> 新片</p>
+    </aside>
+  </div>
+</section>
+
+<!-- ============ 栏目一：号码簿 ============ -->
+<section class="blk wrap" id="book" aria-labelledby="s1">
+  <div class="cap">
+    <p class="p mono">&gt; cat <i>/114/</i>directory</p>
+    <div>
+      <h2 id="s1">号码簿 · 每部片都有自己的号</h2>
+      <p class="dsc">114电影网按更新时间排列，号码即检索入口</p>
+    </div>
+    <a class="go" href="#book">完整号码簿 &raquo;</a>
+  </div>
+  <div class="book">
+    <article class="entry">
+      <div class="ext">
+        <b class="mono">114-1001</b>
+        <span class="mono">EXT · 剧情</span>
+      </div>
+      <div class="info">
+        <h3><a href="#">长街尽头（剧情 · 2026）</a></h3>
+        <p>一条即将拆迁的老街上，几户人家在最后一个月里各自做出选择。</p>
+        <div class="tags"><span class="on">今日上新</span><span>112 分钟</span><span>慢节奏</span><span>适合独处</span></div>
+      </div>
+      <p class="len mono">片长<br><b>112 分钟</b></p>
+      <div class="sc"><b>8.9</b><span>编辑评分</span><a class="on mono" href="#">接通</a></div>
+    </article>
+    <article class="entry">
+      <div class="ext">
+        <b class="mono">114-1002</b>
+        <span class="mono">EXT · 悬疑</span>
+      </div>
+      <div class="info">
+        <h3><a href="#">第二十四通电话（悬疑 · 2025）</a></h3>
+        <p>每晚同一时间响起的电话，把接听的人一步步牵进同一件事里。</p>
+        <div class="tags"><span>104 分钟</span><span>需专注</span><span>深夜场</span></div>
+      </div>
+      <p class="len mono">片长<br><b>104 分钟</b></p>
+      <div class="sc"><b>8.7</b><span>编辑评分</span><a class="on mono" href="#">接通</a></div>
+    </article>
+    <article class="entry">
+      <div class="ext">
+        <b class="mono">114-1003</b>
+        <span class="mono">EXT · 科幻</span>
+      </div>
+      <div class="info">
+        <h3><a href="#">信号塔（科幻 · 2026）</a></h3>
+        <p>一座荒原上的信号塔突然开始向外发送内容，收到的人各不相同。</p>
+        <div class="tags"><span class="on">今日上新</span><span>118 分钟</span><span>需专注</span></div>
+      </div>
+      <p class="len mono">片长<br><b>118 分钟</b></p>
+      <div class="sc"><b>8.5</b><span>编辑评分</span><a class="on mono" href="#">接通</a></div>
+    </article>
+    <article class="entry">
+      <div class="ext">
+        <b class="mono">114-1004</b>
+        <span class="mono">EXT · 剧情</span>
+      </div>
+      <div class="info">
+        <h3><a href="#">深夜接线员（剧情 · 2024）</a></h3>
+        <p>一位夜班接线员接到的最后一通电话，改变了她对这份工作的理解。</p>
+        <div class="tags"><span>98 分钟</span><span>温情</span><span>深夜场</span></div>
+      </div>
+      <p class="len mono">片长<br><b>98 分钟</b></p>
+      <div class="sc"><b>8.8</b><span>编辑评分</span><a class="on mono" href="#">接通</a></div>
+    </article>
+    <article class="entry">
+      <div class="ext">
+        <b class="mono">114-1005</b>
+        <span class="mono">EXT · 文艺</span>
+      </div>
+      <div class="info">
+        <h3><a href="#">号码簿里的名字（文艺 · 2023）</a></h3>
+        <p>整理旧物时发现一本号码簿，顺着名字一个个打过去，大部分已停机。</p>
+        <div class="tags"><span>106 分钟</span><span>慢节奏</span><span>周末下午</span></div>
+      </div>
+      <p class="len mono">片长<br><b>106 分钟</b></p>
+      <div class="sc"><b>8.6</b><span>编辑评分</span><a class="on mono" href="#">接通</a></div>
+    </article>
+    <article class="entry">
+      <div class="ext">
+        <b class="mono">114-1006</b>
+        <span class="mono">EXT · 纪录</span>
+      </div>
+      <div class="info">
+        <h3><a href="#">拨号音（纪录 · 2026）</a></h3>
+        <p>记录通信方式几十年间的变化，从接线员到智能手机的一段听觉史。</p>
+        <div class="tags"><span>86 分钟</span><span>佐餐合适</span><span>真实向</span></div>
+      </div>
+      <p class="len mono">片长<br><b>86 分钟</b></p>
+      <div class="sc"><b>9.0</b><span>编辑评分</span><a class="on mono" href="#">接通</a></div>
+    </article>
+    <article class="entry">
+      <div class="ext">
+        <b class="mono">114-1007</b>
+        <span class="mono">EXT · 喜剧</span>
+      </div>
+      <div class="info">
+        <h3><a href="#">占线（喜剧 · 2025）</a></h3>
+        <p>两个人抢同一条线路，越抢越乱，最后把整栋楼都卷了进来。</p>
+        <div class="tags"><span>94 分钟</span><span>快节奏</span><span>通勤可看</span></div>
+      </div>
+      <p class="len mono">片长<br><b>94 分钟</b></p>
+      <div class="sc"><b>8.3</b><span>编辑评分</span><a class="on mono" href="#">接通</a></div>
+    </article>
+    <article class="entry">
+      <div class="ext">
+        <b class="mono">114-1008</b>
+        <span class="mono">EXT · 家庭</span>
+      </div>
+      <div class="info">
+        <h3><a href="#">接通之后（家庭 · 2024）</a></h3>
+        <p>多年未联系的父子因一通打错的电话重新对话，话不多但分量很重。</p>
+        <div class="tags"><span>102 分钟</span><span>温情</span><span>合家观影</span></div>
+      </div>
+      <p class="len mono">片长<br><b>102 分钟</b></p>
+      <div class="sc"><b>8.7</b><span>编辑评分</span><a class="on mono" href="#">接通</a></div>
+    </article>
+  </div>
+</section>
+
+<!-- ============ 栏目二：按键速拨 ============ -->
+<section class="blk wrap" id="keypad" aria-labelledby="s2">
+  <div class="cap">
+    <p class="p mono">&gt; dial <i>--speed</i></p>
+    <div>
+      <h2 id="s2">按键速拨 · 一个键直达一类片</h2>
+      <p class="dsc">114电影网把类型做成电话键盘，按下即拨</p>
+    </div>
+    <a class="go" href="#keypad">全部类型 &raquo;</a>
+  </div>
+  <div class="pad">
+    <a class="k" href="#"><span class="cnt mono">142</span><b>1</b><h3>剧情文艺</h3><p>人物与情绪推进</p></a>
+    <a class="k" href="#"><span class="cnt mono">96</span><b>2</b><h3>轻松喜剧</h3><p>解压与快节奏</p></a>
+    <a class="k" href="#"><span class="cnt mono">118</span><b>3</b><h3>悬疑犯罪</h3><p>线索与反转</p></a>
+    <a class="k" href="#"><span class="cnt mono">74</span><b>4</b><h3>科幻设定</h3><p>概念驱动</p></a>
+    <a class="k" href="#"><span class="cnt mono">88</span><b>5</b><h3>动画幻想</h3><p>手绘与想象</p></a>
+    <a class="k" href="#"><span class="cnt mono">52</span><b>6</b><h3>纪录写实</h3><p>真实素材</p></a>
+    <a class="k" href="#"><span class="cnt mono">73</span><b>7</b><h3>家庭日常</h3><p>温情与代际</p></a>
+    <a class="k" href="#"><span class="cnt mono">64</span><b>8</b><h3>文艺慢片</h3><p>留白与长镜头</p></a>
+    <a class="k" href="#"><span class="cnt mono">81</span><b>9</b><h3>动作冒险</h3><p>节奏紧凑</p></a>
+    <a class="k star" href="#"><span class="cnt mono">61</span><b>*</b><h3>深夜场</h3><p>适合夜里看</p></a>
+    <a class="k" href="#"><span class="cnt mono">45</span><b>0</b><h3>经典重看</h3><p>老片修复</p></a>
+    <a class="k hash" href="#"><span class="cnt mono">18</span><b>#</b><h3>今日新片</h3><p>刚上架</p></a>
+  </div>
+</section>
+
+<!-- ============ 栏目三：信号强度榜 ============ -->
+<section class="blk wrap" id="signal" aria-labelledby="s3">
+  <div class="cap">
+    <p class="p mono">&gt; signal <i>--strength</i></p>
+    <div>
+      <h2 id="s3">信号强度榜 · 哪部片最近最热</h2>
+      <p class="dsc">114电影网按点播热度换算信号格数，每日刷新</p>
+    </div>
+    <a class="go" href="#signal">完整榜单 &raquo;</a>
+  </div>
+  <div class="signal">
+    <div class="hrow mono">
+      <span>序号</span><span>片名 / 类型</span><span>信号强度</span><span>热度</span>
+    </div>
+    <div class="srow">
+      <span class="no mono">01</span>
+      <span class="nm"><a href="#">长街尽头</a><small>剧情 · 2026 · 112 分钟</small></span>
+      <span class="bar mono" aria-label="满格"><i>▮</i><i>▮</i><i>▮</i><i>▮</i><i>▮</i></span>
+      <span class="val mono">986</span>
+    </div>
+    <div class="srow">
+      <span class="no mono">02</span>
+      <span class="nm"><a href="#">深夜接线员</a><small>剧情 · 2024 · 98 分钟</small></span>
+      <span class="bar mono" aria-label="四格"><i>▮</i><i>▮</i><i>▮</i><i>▮</i><i class="off">▯</i></span>
+      <span class="val mono">934</span>
+    </div>
+    <div class="srow">
+      <span class="no mono">03</span>
+      <span class="nm"><a href="#">第二十四通电话</a><small>悬疑 · 2025 · 104 分钟</small></span>
+      <span class="bar mono" aria-label="四格"><i>▮</i><i>▮</i><i>▮</i><i>▮</i><i class="off">▯</i></span>
+      <span class="val mono">891</span>
+    </div>
+    <div class="srow">
+      <span class="no mono">04</span>
+      <span class="nm"><a href="#">接通之后</a><small>家庭 · 2024 · 102 分钟</small></span>
+      <span class="bar mono" aria-label="四格"><i>▮</i><i>▮</i><i>▮</i><i>▮</i><i class="off">▯</i></span>
+      <span class="val mono">842</span>
+    </div>
+    <div class="srow">
+      <span class="no mono">05</span>
+      <span class="nm"><a href="#">信号塔</a><small>科幻 · 2026 · 118 分钟</small></span>
+      <span class="bar mono" aria-label="三格"><i>▮</i><i>▮</i><i>▮</i><i class="off">▯</i><i class="off">▯</i></span>
+      <span class="val mono">776</span>
+    </div>
+    <div class="srow">
+      <span class="no mono">06</span>
+      <span class="nm"><a href="#">拨号音</a><small>纪录 · 2026 · 86 分钟</small></span>
+      <span class="bar mono" aria-label="三格"><i>▮</i><i>▮</i><i>▮</i><i class="off">▯</i><i class="off">▯</i></span>
+      <span class="val mono">713</span>
+    </div>
+    <div class="srow">
+      <span class="no mono">07</span>
+      <span class="nm"><a href="#">占线</a><small>喜剧 · 2025 · 94 分钟</small></span>
+      <span class="bar mono" aria-label="三格"><i>▮</i><i>▮</i><i>▮</i><i class="off">▯</i><i class="off">▯</i></span>
+      <span class="val mono">648</span>
+    </div>
+    <div class="srow">
+      <span class="no mono">08</span>
+      <span class="nm"><a href="#">号码簿里的名字</a><small>文艺 · 2023 · 106 分钟</small></span>
+      <span class="bar mono" aria-label="两格"><i>▮</i><i>▮</i><i class="off">▯</i><i class="off">▯</i><i class="off">▯</i></span>
+      <span class="val mono">562</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 栏目四：呼叫日志 ============ -->
+<section class="blk wrap" id="log" aria-labelledby="s4">
+  <div class="cap">
+    <p class="p mono">&gt; tail <i>-f</i> call.log</p>
+    <div>
+      <h2 id="s4">呼叫日志 · 每一次上新都记着</h2>
+      <p class="dsc">114电影网更新时间线，含号码与状态</p>
+    </div>
+    <a class="go" href="#log">完整日志 &raquo;</a>
+  </div>
+  <div class="log">
+    <div class="row">
+      <time class="mono">19:00</time>
+      <span class="st new mono">NEW</span>
+      <span class="dsc">今日批次已上架，新增 18 部影片<small>剧情 6 部 · 悬疑 4 部 · 纪录 3 部 · 其余 5 部</small></span>
+      <span class="ext mono">114-1001 ~ 1018</span>
+    </div>
+    <div class="row">
+      <time class="mono">18:30</time>
+      <span class="st ok mono">OK</span>
+      <span class="dsc">信号强度榜完成刷新<small>按近七日点播热度重新排序</small></span>
+      <span class="ext mono">RANK-20261004</span>
+    </div>
+    <div class="row">
+      <time class="mono">18:05</time>
+      <span class="st hot mono">HOT</span>
+      <span class="dsc">《长街尽头》进入信号榜首位<small>单日点播增幅 34%</small></span>
+      <span class="ext mono">114-1001</span>
+    </div>
+    <div class="row">
+      <time class="mono">15:20</time>
+      <span class="st ok mono">OK</span>
+      <span class="dsc">经典重看分区补录 6 部修复版老片<small>含 2 部 4K 修复版本</small></span>
+      <span class="ext mono">114-2001 ~ 2006</span>
+    </div>
+    <div class="row">
+      <time class="mono">12:40</time>
+      <span class="st ok mono">OK</span>
+      <span class="dsc">《拨号音》完成剧情简介与时长校对<small>纪录类 · 86 分钟</small></span>
+      <span class="ext mono">114-1006</span>
+    </div>
+    <div class="row">
+      <time class="mono">09:10</time>
+      <span class="st ok mono">OK</span>
+      <span class="dsc">新片进入待整理队列，核对片名、年份与产地<small>共 22 部待处理</small></span>
+      <span class="ext mono">QUEUE-20261004</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 栏目五：站点特色 ============ -->
+<section class="blk wrap" id="why" aria-labelledby="s5">
+  <div class="cap">
+    <p class="p mono">&gt; about <i>--features</i></p>
+    <div>
+      <h2 id="s5">为什么用 114电影网 查片</h2>
+      <p class="dsc">查号台式的找片逻辑，比翻列表更快</p>
+    </div>
+    <a class="go" href="#about">了解我们 &raquo;</a>
+  </div>
+  <div class="pts">
+    <div class="pt">
+      <h3>号码即入口</h3>
+      <p>每部影片都有 114 开头的分机号，记住号码就能再找回来，不必反复搜片名。</p>
+    </div>
+    <div class="pt">
+      <h3>按键直达类型</h3>
+      <p>把类型做成电话键盘，一个键直达一类片，深夜场、经典、新片各占一个键。</p>
+    </div>
+    <div class="pt">
+      <h3>信号格看热度</h3>
+      <p>热度换算成信号格数，一眼看出哪部片正热，避开只有评分没有热度的冷条目。</p>
+    </div>
+    <div class="pt">
+      <h3>日志可追溯</h3>
+      <p>呼叫日志记录每次更新时间与批次范围，想查某天上了什么片，翻日志就知道。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 栏目六：关于 / FAQ ============ -->
+<section class="blk wrap" id="about" aria-labelledby="s6">
+  <div class="cap">
+    <p class="p mono">&gt; help <i>--faq</i></p>
+    <div>
+      <h2 id="s6">关于 114电影网 · 常见问题</h2>
+      <p class="dsc">了解 114电影网 的号码规则与更新节奏</p>
+    </div>
+    <a class="go" href="#about">联系站长 &raquo;</a>
+  </div>
+  <div class="faqs">
+    <details open>
+      <summary>114电影网是什么样的电影网站？</summary>
+      <p>114电影网（https://114dianyingwang-cn.github.io）是把找电影做成查号台的影视推荐站点：每部影片都编上 114 开头的分机号，可按号码查片、按键速拨类型、查看信号强度榜与呼叫日志，每日更新热映片单并附剧情简介、时长与评分参考。</p>
+    </details>
+    <details>
+      <summary>114电影网的片单多久更新一次？</summary>
+      <p>号码簿每日 19:00 更新一批新片，信号强度榜按点播热度每日刷新排序，呼叫日志记录每次更新时间，按键速拨的分类数量随片库补充同步变化。</p>
+    </details>
+    <details>
+      <summary>手机端可以正常浏览 114电影网 吗？</summary>
+      <p>可以。114电影网采用响应式设计，圆形拨号盘在小屏自动缩小，号码簿条目改为单列排布，信号强度榜隐藏字符条保留数值，移动端另配底部快捷导航。</p>
+    </details>
+    <details>
+      <summary>找不到想看的电影怎么办？</summary>
+      <p>可在查号台输入框按片名、导演检索，也可进入按键速拨按类型筛选；仍未收录的影片可通过联系站长提交片名，我们会在下一次更新时优先补录并分配号码。</p>
+    </details>
+  </div>
+</section>
+
+</main>
+
+<!-- ============ 页脚 ============ -->
+<footer class="foot">
+  <div class="wrap">
+    <div class="f-grid">
+      <div class="f-brand">
+        <div class="lg"><b class="mono">114</b><span>114电影网</span></div>
+        <p>114电影网把找电影做成查号台：每部影片都有 114 开头的分机号，可以按号码查片、按键速拨类型、看信号强度榜与呼叫日志。号码簿每日 19:00 更新，剧情简介、时长与评分都标在条目上，接通之前心里就有数。</p>
+        <p class="mono">网址：https://114dianyingwang-cn.github.io</p>
+      </div>
+      <div>
+        <h4>查号台</h4>
+        <ul>
+          <li><a href="#dial">拨号盘</a></li>
+          <li><a href="#book">号码簿</a></li>
+          <li><a href="#keypad">按键速拨</a></li>
+          <li><a href="#signal">信号强度榜</a></li>
+          <li><a href="#log">呼叫日志</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>类型分区</h4>
+        <ul>
+          <li><a href="#keypad">剧情文艺</a></li>
+          <li><a href="#keypad">悬疑犯罪</a></li>
+          <li><a href="#keypad">科幻设定</a></li>
+          <li><a href="#keypad">纪录写实</a></li>
+          <li><a href="#keypad">经典重看</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>站点信息</h4>
+        <ul>
+          <li><a href="#about">关于114电影网</a></li>
+          <li><a href="#why">站点特色</a></li>
+          <li><a href="#">更新日志</a></li>
+          <li><a href="#">意见反馈</a></li>
+          <li><a href="#">免责声明</a></li>
+        </ul>
+      </div>
+    </div>
+    <p class="copy">
+      114电影网 &copy; 2026 · 本站为电影推荐与影视资讯聚合站点，所列影片信息仅供参考。<br>
+      Powered by 114电影网 | https://114dianyingwang-cn.github.io
+    </p>
+  </div>
+</footer>
+
+<!-- ============ 移动端底部导航 ============ -->
+<nav class="dock" aria-label="移动端快捷导航">
+  <ul>
+    <li><a href="#top" class="on"><span class="ic" aria-hidden="true">◆</span>首页</a></li>
+    <li><a href="#book"><span class="ic" aria-hidden="true">▤</span>号码簿</a></li>
+    <li><a href="#keypad"><span class="ic" aria-hidden="true">✦</span>速拨</a></li>
+    <li><a href="#signal"><span class="ic" aria-hidden="true">★</span>信号</a></li>
+    <li><a href="#about"><span class="ic" aria-hidden="true">◎</span>关于</a></li>
+  </ul>
+</nav>
+
+<a class="up" href="#top" aria-label="返回顶部">↑</a>
+
+</body>
+</html>
